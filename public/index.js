@@ -1,37 +1,17 @@
-var world = [
-    [2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2],
-    [2, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2],
-    [2, 1, 2, 2, 2, 2, 1, 2, 2, 2, 2, 1, 2],
-    [2, 1, 2, 1, 1, 1, 1, 1, 1, 1, 2, 1, 2],
-    [2, 1, 2, 2, 2, 2, 1, 2, 2, 2, 2, 1, 2],
-    [2, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2],
-    [2, 1, 2, 1, 2, 2, 2, 2, 2, 1, 2, 1, 2],
-    [2, 1, 2, 1, 1, 1, 1, 1, 1, 1, 2, 1, 2],
-    [2, 1, 2, 1, 2, 2, 2, 2, 2, 1, 2, 1, 2],
-    [2, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2],
-    [2, 1, 2, 1, 2, 2, 2, 2, 2, 1, 2, 1, 2],
-    [2, 1, 2, 1, 1, 1, 2, 1, 1, 1, 2, 1, 2],
-    [2, 1, 2, 2, 2, 1, 2, 1, 2, 2, 2, 1, 2],
-    [2, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2],
-    [2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2]
-];
+//store name in it's own respective DOM
+let name;
 
-var pacman = {
-    x: 1,
-    y: 1
-}
-
-function displayWorld() {
-    let stage = world;
+//translate the world from the array data input to a HTML output
+function displayWorld(world) {
     var output = '';
-    for (var i = 0; i < stage.length; i++) {
+    for (var i = 0; i < world.length; i++) {
         output += "<div class='row'>";
-        for (var j = 0; j < stage[i].length; j++) {
-            if (stage[i][j] == 2) {
+        for (var j = 0; j < world[i].length; j++) {
+            if (world[i][j] == 2) {
                 output += "<div class='brick'></div>";
-            } else if (stage[i][j] == 1) {
+            } else if (world[i][j] == 1) {
                 output += "<div class='coin'></div>";
-            } else if (stage[i][j] == 0) {
+            } else if (world[i][j] == 0) {
                 output += "<div class='empty'></div>";
             }
         }
@@ -43,14 +23,9 @@ function displayWorld() {
 $(document).ready(function () {
     var socket = io();
 
-    socket.emit('new_user');
-    socket.on('new_user_msg', function (data) {
-        console.log('hi new user');
-    })
-
-    function displayPacman() {
-        $('#pacman').css({ 'top': pacman.y * 23 + 'px' });
-        $('#pacman').css({ 'left': pacman.x * 20 + 'px' });
+    function displayPacman(x,y) {
+        $('#pacman').css({ 'top': y * 23 + 'px' });
+        $('#pacman').css({ 'left': x * 20 + 'px' });
     }
     
     function movePacman() {
@@ -66,21 +41,30 @@ $(document).ready(function () {
         }
     }
     function eatCoin(){
-        //div with class row of nth (y+1)
-        //div with class row div of nth (x+1)
         $('div.row:nth-of-type(' + (pacman.y+1) + ') div:nth-of-type(' + (pacman.x+1) + ')').addClass('empty').removeClass('coin');
     }
 
+    while(!name){
+        name = prompt("Please enter your name");
+    }
+
+    //on page load, create new user and set user location on game
+    socket.emit('new_user',{name:name});
+    socket.on('start_player', function(data){
+        displayPacman(data.x, data.y);
+    })
+
 
     $('button').click(function () {
-        $('#stage').html(displayWorld());
-    });
+        socket.emit('start_game',{name:name});
 
-    $('#stage').html(displayPacman());
+        socket.on('start_map', function(data){
+            $('#stage').html(displayWorld(data.map));
+        })
+    });
 
     //pacman directional movement on direction key press
     $(document).keydown(function (e) {
-        console.log(e.keyCode);
         if (e.keyCode == 38) {
             pacman.y--;
 
